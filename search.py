@@ -104,7 +104,7 @@ if __name__ == "__main__":
                                    metrics=accuracy,
                                    reward_function=reward_accuracy,
                                    optimizer=optimizer,
-                                   callbacks=[LRSchedulerCallback(lr_scheduler), ArchitectureCheckpoint("./checkpoints_{0}".format(output))],
+                                   callbacks=[LRSchedulerCallback(lr_scheduler), ArchitectureCheckpoint("./checkpoints_{0}".format(args.output))],
                                    batch_size=args.batch_size,
                                    num_epochs=num_epochs,
                                    dataset_train=dataset_train,
@@ -115,7 +115,7 @@ if __name__ == "__main__":
         if args.visualization:
             trainer.enable_visualization()
         trainer.train()
-        trainer.export(file="optimised_{0}.json".format(output))
+        # trainer.export(file="optimised_{0}.json".format(args.output))
     else:
         from nni.retiarii.oneshot.pytorch.enas import EnasTrainer
         trainer = EnasTrainer(model,
