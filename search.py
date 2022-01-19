@@ -80,7 +80,7 @@ if __name__ == "__main__":
     #     num_epochs = args.epochs or 310
     # elif args.search_for == "micro":
     model = MicroNetwork(num_layers=6, out_channels=24, num_nodes=5, dropout_rate=0.25, use_aux_heads=False)
-    print("Let's use", torch.cuda.device_count(), "GPUs!")
+    # print("Let's use", torch.cuda.device_count(), "GPUs!")
     if args.gpu is None:
         model = nn.DataParallel(model)
     else:
