@@ -35,6 +35,8 @@ if __name__ == "__main__":
     parser.add_argument("--gpu", default=None, type=int)
     args = parser.parse_args()
 
+    torch.multiprocessing.set_sharing_strategy('file_system')
+
     print("Output is", args.output)
     if torch.cuda.is_available():
         if args.gpu is None:
