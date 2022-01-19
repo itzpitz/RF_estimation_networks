@@ -18,6 +18,8 @@ from nni.nas.pytorch.callbacks import (ArchitectureCheckpoint,
                                        LRSchedulerCallback)
 from utils import accuracy, reward_accuracy
 
+import json
+
 logger = logging.getLogger('nni')
 
 
@@ -29,6 +31,7 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", default=None, type=int, help="Number of epochs (default: macro 310, micro 150)")
     parser.add_argument("--visualization", default=False, action="store_true")
     parser.add_argument("--v1", default=True, action="store_true")
+    parser.add_argument("--output", default='CLx', type=str)
     args = parser.parse_args()
 
     if torch.cuda.is_available():
