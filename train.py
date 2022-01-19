@@ -2,6 +2,7 @@
 # Licensed under the MIT license.
 import sys
 sys.path.append('micro_optimisation')
+import os
 import torch
 import torch.nn as nn
 import torchvision as tv
@@ -14,6 +15,9 @@ from utils import reward_accuracy
 from nni.nas.pytorch.fixed import apply_fixed_architecture
 
 import numpy as np
+from argparse import ArgumentParser
+
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 
 def train(model, num_epochs, training_set, validation_set, criterion, optimizer, device, output, scheduler=None,
@@ -55,7 +59,8 @@ def train(model, num_epochs, training_set, validation_set, criterion, optimizer,
         if val_loss_epoch < best_loss:
             print('Validation loss improved from:', best_loss, 'to', val_loss_epoch)
             best_loss = val_loss_epoch
-            torch.save(model.state_dict(), 'trained_model_{0}_checkpoint.model'.format(output))
+            torch.save(model.state_dict(), os.path.join('trained_models',
+                                                        'trained_model_{0}.model'.format(output)))
 
         if scheduler is not None:
             scheduler.step()
@@ -64,7 +69,7 @@ def train(model, num_epochs, training_set, validation_set, criterion, optimizer,
               'MAE: {:.4f}'
               .format(epoch + 1, num_epochs, loss_list[-1], val_loss[-1], val_acc_epoch, val_mae_epoch))
 
-    with open('training_data_{0}_checkpoint.txt'.format(output), 'w+') as f:
+    with open(os.path.join('train_data', 'training_data_{0}_checkpoint.txt'.format(output)), 'w+') as f:
         f.write('epoch; loss, validation loss; validation accuracy; validation mae\n')
         for i in range(num_epochs):
             f.write('{}; {:.4f}; {:.4f}; {:.4f}; {:.4f}\n'.format(i+1, loss_list[i], val_loss[i],
@@ -103,27 +108,47 @@ def count_parameters(model):
 
 
 def main():
+    parser = ArgumentParser("train")
+    parser.add_argument("--batch_size", default=32, type=int)
+    parser.add_argument("--log_frequency", default=10, type=int)
+    parser.add_argument("--epochs", default=None, type=int, help="Number of epochs (default: macro 310, micro 150)")
+    parser.add_argument("--output", default='CLx', type=str)
+    parser.add_argument("--gpu", default=None, type=int)
+    args = parser.parse_args()
+
+    # test first!!
+    # python train.py --batch_size 128 --epochs 1 --gpu 1 --output CLy
+    # needs folders checkpoints_output, continued_training, train_data, trained_models
+
     if torch.cuda.is_available():
-        device = torch.device("cuda:1")
+        if args.gpu is None:
+            device = torch.device("cuda:0")
+        else:
+            print("Running on GPU", args.gpu)
+            device = torch.device("cuda:%s" % args.gpu)
         print("Running on the GPU")
     else:
         device = torch.device("cpu")
         print("Running on the CPU")
 
-    batch_size = 256
-    log_frequency = 50
-    num_epochs = 50
+    with open('stats.json', 'r') as file:
+        stats = json.load(file)
+
+    mean = stats[args.output]['mean']
+    std = stats[args.output]['std']
+    norm = True
+
+    batch_size = args.batch_size
+    log_frequency = args.log_frequency
+    num_epochs = args.epochs
+    output = args.output
     learning_rate = 1e-3
     train_split = 0.8
 
-    output = 'var'
-    mean = 0.1271
-    std = 0.0683
-    norm = True
-
     transform = tv.transforms.Compose([
-        tv.transforms.Normalize((0.01,), (0.0015,))
+        tv.transforms.Normalize((stats['transform']['mean'],), (stats['transform']['std'],))
     ])
+
     full_dataset = CustomSet(image_dir='training_torch',
                              mean=mean,
                              std=std,
@@ -132,17 +157,6 @@ def main():
                              transform=transform,
                              seed=123,
                              )
-    # full_dataset = CustomSet(image_dir='training_torch',
-    #                          cl_min=0.5,
-    #                          cl_max=4.,
-    #                          angle_max=45.,
-    #                          var_min=0.01,
-    #                          var_max=0.25,
-    #                          minmaxtransform=False,
-    #                          output=output,
-    #                          transform=transform,
-    #                          seed=123,
-    #                          )
 
     train_len = int(len(full_dataset) * train_split)
     val_len = len(full_dataset) - train_len
@@ -153,9 +167,9 @@ def main():
 
     model = MicroNetwork(num_layers=6, out_channels=24, num_nodes=5, dropout_rate=0.25, use_aux_heads=False)
     print("Let's use", torch.cuda.device_count(), "GPUs!")
-    model = nn.DataParallel(model, device_ids=[1, 3]).to(device)
+    model = nn.DataParallel(model, device_ids=[2]).to(device)
 
-    apply_fixed_architecture(model, "checkpoints_{0}/epoch_149.json".format(output))
+    apply_fixed_architecture(model, os.path.join("checkpoints_{0}".format(output), "epoch_149.json"))
 
     print('Number of trainable parameters: {0}'.format(count_parameters(model)))
 
@@ -173,7 +187,7 @@ def main():
     #     save for continued training
     state = {'epoch': num_epochs + 1, 'state_dict': model.state_dict(),
              'optimizer': optimizer.state_dict(), 'scheduler': scheduler.state_dict(), }
-    torch.save(state, 'state_continued_training_{0}_checkpoint'.format(output))
+    torch.save(state, os.path.join('continued_training', 'state_continued_training_{0}_checkpoint'.format(output)))
 
 
 if __name__ == "__main__":
