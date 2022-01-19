@@ -7,6 +7,7 @@ from argparse import ArgumentParser
 
 import torch
 import torch.nn as nn
+import torchvision as tv
 
 # import datasets
 from torch.utils.data import random_split
@@ -16,6 +17,8 @@ from nni.algorithms.nas.pytorch import enas
 from nni.nas.pytorch.callbacks import (ArchitectureCheckpoint,
                                        LRSchedulerCallback)
 from utils import accuracy, reward_accuracy
+
+import json
 
 logger = logging.getLogger('nni')
 
@@ -28,24 +31,37 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", default=None, type=int, help="Number of epochs (default: macro 310, micro 150)")
     parser.add_argument("--visualization", default=False, action="store_true")
     parser.add_argument("--v1", default=True, action="store_true")
+    parser.add_argument("--output", default='CLx', type=str)
+    parser.add_argument("--gpu", default=None, type=int)
     args = parser.parse_args()
 
+    print("Output is", args.output)
     if torch.cuda.is_available():
-        device = torch.device("cuda:0")
+        if args.gpu is None:
+            device = torch.device("cuda:0")
+        else:
+            device = torch.device("cuda:%s" % args.gpu)
         print("Running on the GPU")
     else:
         device = torch.device("cpu")
         print("Running on the CPU")
-    output = 'var'
+
+    with open('stats.json', 'r') as file:
+        stats = json.load(file)
+
+    mean = stats[args.output]['mean']
+    std = stats[args.output]['std']
+    norm = True
+
+    transform = tv.transforms.Compose([
+        tv.transforms.Normalize((stats['transform']['mean'],), (stats['transform']['std'],))
+    ])
     full_dataset = CustomSet(image_dir='training_torch',
-                             cl_min=0.5,
-                             cl_max=4.,
-                             angle_max=45.,
-                             var_min=0.01,
-                             var_max=0.25,
-                             minmaxtransform=False,
-                             output=output,
-                             transform=None,
+                             mean=mean,
+                             std=std,
+                             norm=norm,
+                             output=args.output,
+                             transform=transform,
                              seed=123,
                              num_images=75000)
 
@@ -64,9 +80,12 @@ if __name__ == "__main__":
     #     num_epochs = args.epochs or 310
     # elif args.search_for == "micro":
     model = MicroNetwork(num_layers=6, out_channels=24, num_nodes=5, dropout_rate=0.25, use_aux_heads=False)
-    if torch.cuda.device_count() > 1:
-        print("Let's use", torch.cuda.device_count(), "GPUs!")
+    print("Let's use", torch.cuda.device_count(), "GPUs!")
+    if args.gpu is None:
         model = nn.DataParallel(model)
+    else:
+        model = nn.DataParallel(model, device_ids=[args.gpu])
+
     num_epochs = args.epochs or 150
     if args.v1:
         mutator = enas.EnasMutator(model, tanh_constant=1.1, cell_exit_extra_step=True)
@@ -91,7 +110,8 @@ if __name__ == "__main__":
                                    dataset_train=dataset_train,
                                    dataset_valid=dataset_valid,
                                    log_frequency=args.log_frequency,
-                                   mutator=mutator)
+                                   mutator=mutator,
+                                   device=device)
         if args.visualization:
             trainer.enable_visualization()
         trainer.train()
