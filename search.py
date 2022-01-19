@@ -36,6 +36,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print("Output is", args.output)
+    print(torch.cuda.is_available())
     if torch.cuda.is_available():
         if args.gpu is None:
             device = torch.device("cuda:0")
