@@ -114,10 +114,11 @@ def main():
     parser.add_argument("--epochs", default=None, type=int, help="Number of epochs (default: macro 310, micro 150)")
     parser.add_argument("--output", default='CLx', type=str)
     parser.add_argument("--gpu", default=None, type=int)
+    parser.add_argument("--nr_images", default=None, type=int)
     args = parser.parse_args()
 
     # test first!!
-    # python train.py --batch_size 128 --epochs 1 --gpu 1 --output CLy
+    # python train.py --batch_size 128 --epochs 10 --gpu 1 --output CLy --nr_images 10000
     # needs folders checkpoints_output, continued_training, train_data, trained_models
 
     if torch.cuda.is_available():
@@ -156,6 +157,7 @@ def main():
                              output=output,
                              transform=transform,
                              seed=123,
+                             num_images=args.nr_images
                              )
 
     train_len = int(len(full_dataset) * train_split)
