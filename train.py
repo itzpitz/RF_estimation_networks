@@ -170,7 +170,10 @@ def main():
 
     model = MicroNetwork(num_layers=6, out_channels=24, num_nodes=5, dropout_rate=0.25, use_aux_heads=False)
     print("Let's use", torch.cuda.device_count(), "GPUs!")
-    model = nn.DataParallel(model, device_ids=[2]).to(device)
+    if args.gpu is None:
+        model = nn.DataParallel(model).to(device)
+    else:
+        model = nn.DataParallel(model, device_ids=[args.gpu]).to(device)
 
     apply_fixed_architecture(model, os.path.join("checkpoints_{0}".format(output), "epoch_149.json"))
 
