@@ -30,12 +30,8 @@ def main():
 
     batch_size = 128
 
-    norms = {
-        'CLx': [2.2436, 1.0114],
-        'CLy': [2.2448, 1.0112],
-        'angle': [22.5027, 12.9941],
-        'var': [0.1271, 0.0683],
-    }
+    with open('stats.json', 'r') as file:
+        norms = json.load(file)
 
     n_digits = {
             'CLx': 4,
@@ -45,7 +41,7 @@ def main():
             }
 
     transform = tv.transforms.Compose([
-        tv.transforms.Normalize((0.01,), (0.0015,))
+        tv.transforms.Normalize((stats['transform']['mean'],), (stats['transform']['std'],))
     ])
 
     for output in ['CLx', 'CLy', 'angle', 'var']:
