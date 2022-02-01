@@ -175,7 +175,7 @@ def main():
     else:
         model = nn.DataParallel(model, device_ids=[args.gpu]).to(device)
 
-    apply_fixed_architecture(model, os.path.join("checkpoints_{0}".format(output), "epoch_149.json"))
+    apply_fixed_architecture(model, os.path.join("checkpoints_{0}".format(output), "epoch_309.json"))
 
     print('Number of trainable parameters: {0}'.format(count_parameters(model)))
 

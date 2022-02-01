@@ -16,6 +16,7 @@ from nni.nas.pytorch.fixed import apply_fixed_architecture
 
 import numpy as np
 from scipy import stats
+import json
 
 logger = logging.getLogger('nni')
 logger.propagate = False
@@ -41,14 +42,14 @@ def main():
             }
 
     transform = tv.transforms.Compose([
-        tv.transforms.Normalize((stats['transform']['mean'],), (stats['transform']['std'],))
+        tv.transforms.Normalize((norms['transform']['mean'],), (norms['transform']['std'],))
     ])
 
     for output in ['CLx', 'CLy', 'angle', 'var']:
         print(output)
 
-        mean = norms[output][0]
-        std = norms[output][1]
+        mean = norms[output]['mean']
+        std = norms[output]['std']
 
         full_dataset = CustomSet(image_dir='eval_set',
                                  mean=mean,
@@ -62,12 +63,21 @@ def main():
         full_dataset = DataLoader(dataset=full_dataset, batch_size=batch_size, shuffle=False)
 
         model = MicroNetwork(num_layers=6, out_channels=24, num_nodes=5, dropout_rate=0.25, use_aux_heads=False)
-        model = nn.DataParallel(model).to(device)
+        model = nn.DataParallel(model, device_ids=[0]).to(device)
+        
+        search_epoch = 310
+        if output == 'CLy':
+            apply_fixed_architecture(model, os.path.join("checkpoints_{0}_old_search".format(output), 'epoch_%s.json' %(search_epoch - 1)))
+        else:
+            apply_fixed_architecture(model, os.path.join("checkpoints_{0}".format(output), 'epoch_%s.json' %(search_epoch - 1)))
 
-        apply_fixed_architecture(model, os.path.join("checkpoints_{0}".format(output), 'epoch_149.json'))
-
-        model.load_state_dict(torch.load(os.path.join('trained_models', 'trained_model_' + output +
-                                                                   '_checkpoint.model'),
+        if search_epoch == 150:
+            model.load_state_dict(torch.load(os.path.join('trained_models', 'trained_model_' + output +
+                                                                                   '.model'),
+                                  map_location=device))
+        else:
+            model.load_state_dict(torch.load(os.path.join('trained_models', 'trained_model_' + output +
+                                                                   '_epoch%s.model' %search_epoch),
                               map_location=device))
 
         output_predictions = []
@@ -106,7 +116,7 @@ def main():
         print(f"R-squared: {res.rvalue ** 2:.6f}")
         print('Nr. of images:', len(output_predictions))
 
-        with open('cnn_predictions_' + output + '.txt', 'w+') as file:
+        with open(os.path.join('predictions', 'cnn_predictions_' + output + '.txt'), 'w+') as file:
             file.write('Ground truth; Network Prediction\n')
             for idx, y in enumerate(output_true):
                 file.write('{:5f}'.format(y))
