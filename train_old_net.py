@@ -233,7 +233,6 @@ def main():
 
     model = Net()
     print("Let's use", torch.cuda.device_count(), "GPUs!")
-    print("Let's use", torch.cuda.device_count(), "GPUs!")
     if args.gpu is None:
         model = nn.DataParallel(model).to(device)
     else:
