@@ -125,7 +125,8 @@ def train(model, num_epochs, training_set, validation_set, criterion, optimizer,
         if val_loss_epoch < best_loss:
             print('Validation loss improved from:', best_loss, 'to', val_loss_epoch)
             best_loss = val_loss_epoch
-            torch.save(model.state_dict(), os.path.join('trained_models', 'trained_model_{0}_old_arch.model'.format(output))
+            torch.save(model.state_dict(), os.path.join('trained_models',
+                                                        'trained_model_{0}_old_arch.model'.format(output)))
 
         if scheduler is not None:
             scheduler.step()
@@ -134,7 +135,7 @@ def train(model, num_epochs, training_set, validation_set, criterion, optimizer,
               'MAE: {:.4f}'
               .format(epoch + 1, num_epochs, loss_list[-1], val_loss[-1], val_acc_epoch, val_mae_epoch))
 
-    with open(os.path.join('train_data', 'training_data_{0}_old_arch.txt'.format(output), 'w+') as f:
+    with open(os.path.join('train_data', 'training_data_{0}_old_arch.txt'.format(output)), 'w+') as f:
         f.write('epoch; loss, validation loss; validation accuracy; validation mae\n')
         for i in range(num_epochs):
             f.write('{}; {:.4f}; {:.4f}; {:.4f}; {:.4f}\n'.format(i+1, loss_list[i], val_loss[i],
@@ -263,7 +264,7 @@ def main():
     #     save for continued training
     state = {'epoch': num_epochs + 1, 'state_dict': model.state_dict(),
              'optimizer': optimizer.state_dict(), 'scheduler': scheduler.state_dict(), }
-    torch.save(state, 'state_continued_training_{0}_checkpoint'.format(output))
+    torch.save(state, os.path.join('continued_training', 'state_continued_training_{0}_old_arch.model'.format(output)))
 
 
 if __name__ == "__main__":
