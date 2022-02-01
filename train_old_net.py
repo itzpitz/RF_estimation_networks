@@ -186,13 +186,6 @@ def main():
     # python train.py --batch_size 128 --epochs 10 --gpu 1 --output CLy --nr_images 10000
 
     if torch.cuda.is_available():
-        device = torch.device("cuda:0")
-        print("Running on the GPU")
-    else:
-        device = torch.device("cpu")
-        print("Running on the CPU")
-
-    if torch.cuda.is_available():
         if args.gpu is None:
             device = torch.device("cuda:0")
         else:
