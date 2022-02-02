@@ -66,10 +66,7 @@ def main():
         model = nn.DataParallel(model, device_ids=[0]).to(device)
         
         search_epoch = 310
-        if output == 'CLy':
-            apply_fixed_architecture(model, os.path.join("checkpoints_{0}_old_search".format(output), 'epoch_%s.json' %(search_epoch - 1)))
-        else:
-            apply_fixed_architecture(model, os.path.join("checkpoints_{0}".format(output), 'epoch_%s.json' %(search_epoch - 1)))
+        apply_fixed_architecture(model, os.path.join("checkpoints_{0}".format(output), 'epoch_%s.json' %(search_epoch - 1)))
 
         if search_epoch == 150:
             model.load_state_dict(torch.load(os.path.join('trained_models', 'trained_model_' + output +
