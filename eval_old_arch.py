@@ -13,9 +13,7 @@ from utils import reward_accuracy
 
 import numpy as np
 from scipy import stats
-
-logger = logging.getLogger('nni')
-logger.propagate = False
+import json
 
 
 class Net(nn.Module):
@@ -97,29 +95,25 @@ def main():
 
     batch_size = 128
 
-    norms = {
-        'CLx': [2.2436, 1.0114],
-        'CLy': [2.2448, 1.0112],
-        'angle': [22.5027, 12.9941],
-        'var': [0.1271, 0.0683],
-    }
+    with open('stats.json', 'r') as file:
+        norms = json.load(file)
 
     n_digits = {
-            'CLx': 4,
-            'CLy': 4,
-            'angle': 2,
-            'var': 2
-            }
+        'CLx': 4,
+        'CLy': 4,
+        'angle': 2,
+        'var': 2
+    }
 
     transform = tv.transforms.Compose([
-        tv.transforms.Normalize((0.01,), (0.0015,))
+        tv.transforms.Normalize((norms['transform']['mean'],), (norms['transform']['std'],))
     ])
 
     for output in ['CLx', 'CLy']:
         print(output)
 
-        mean = norms[output][0]
-        std = norms[output][1]
+        mean = norms[output]['mean']
+        std = norms[output]['std']
 
         full_dataset = CustomSet(image_dir='eval_set',
                                  mean=mean,
@@ -138,7 +132,7 @@ def main():
         # apply_fixed_architecture(model, os.path.join("checkpoints_{0}".format(output), 'epoch_149.json'))
 
         model.load_state_dict(torch.load(os.path.join('trained_models', 'trained_model_' + output +
-                                                                   '_old_architecture.model'),
+                                                      '_old_arch.model'),
                               map_location=device))
 
         output_predictions = []
@@ -177,7 +171,7 @@ def main():
         print(f"R-squared: {res.rvalue ** 2:.6f}")
         print('Nr. of images:', len(output_predictions))
 
-        with open('cnn_predictions_old_architecture_' + output + '.txt', 'w+') as file:
+        with open(os.path.join('predictions', 'cnn_predictions_old_architecture_' + output + '.txt'), 'w+') as file:
             file.write('Ground truth; Network Prediction\n')
             for idx, y in enumerate(output_true):
                 file.write('{:5f}'.format(y))
